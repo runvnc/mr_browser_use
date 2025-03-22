@@ -594,7 +594,16 @@ async def start_browser(context=None):
             # Additional anti-detection experimental options
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option("useAutomationExtension", False)
-            logger.info(f"Starting Chrome in {'headless' if options.headless else 'interactive'} mode")
+            
+            # Check if headless mode is enabled by looking for the argument
+            is_headless = False
+            for arg in options.arguments:
+                if '--headless' in arg:
+                    is_headless = True
+                    break
+            
+            # Log the browser mode
+            logger.info(f"Starting Chrome in {'headless' if is_headless else 'interactive'} mode")
             
             from webdriver_manager.chrome import ChromeDriverManager
             
@@ -621,6 +630,13 @@ async def start_browser(context=None):
                     fresh_options.add_argument(f'--user-data-dir={data_dir}')
                     
                     # Set headless mode if needed (uncomment for headless)
+                    is_headless = False  # Track headless state for logging
+                    
+                    # Uncomment the next line for headless mode
+                    # fresh_options.add_argument('--headless=new')
+                    # if uncommented: is_headless = True
+                    
+                    logger.info(f"Starting Chrome in {'headless' if is_headless else 'interactive'} mode (fallback)")
                     # fresh_options.add_argument('--headless=new')
                     
                     # Use the fresh options object
