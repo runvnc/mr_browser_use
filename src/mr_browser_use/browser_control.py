@@ -628,6 +628,8 @@ async def start_browser(context=None):
         logger.info(f"Using Chrome version: {chrome_version or 'auto-detect'}") 
         
         def create_driver():
+            chrome_version = await loop.run_in_executor(None, detect_chrome_version)
+ 
             # Create a temporary directory for Chrome data
             # Using a fresh directory for each session can help avoid profile issues
             data_dir = tempfile.mkdtemp(prefix="mr_browser_chrome_")
@@ -655,11 +657,6 @@ async def start_browser(context=None):
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_argument('--disable-extensions')
             options.add_argument('--disable-infobars')
-            
-            # NOTE: undetected-chromedriver handles most anti-detection measures internally
-            # The following line is commented out because it causes conflicts
-            # options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            # options.add_experimental_option("useAutomationExtension", False)
             
             # Set window size - important for consistent behavior
             options.add_argument('--window-size=1920,1080')
