@@ -10,8 +10,11 @@ from .browser_control import (
     stop_browser, 
     get_browser_client
 )
+from lib.utils.debug import debug_box
 
 logger = logging.getLogger(__name__)
+
+debug_box("----------------------------- mr_browser_use loaded ------------------------------------")
 
 @command()
 async def browser_check(context=None):
