@@ -555,10 +555,6 @@ async def start_browser(context=None):
         return {"status": "ok", "message": "Browser is already running"}
    
     # TODO: try this:
-    # from webdriver_manager.chrome import ChromeDriverManager
-    # driver_exec_path = ChromeDriverManager().install()
-    # driver = uc.Chrome(driver_executable_path=driver_exec_path)
-
     try:
         # Create and configure WebDriver
         loop = asyncio.get_event_loop()
@@ -574,11 +570,9 @@ async def start_browser(context=None):
             # Useful for debugging
             # options.add_argument('--headless=new')
             
-            # Note: Some experimental options work differently with undetected_chromedriver
-            # See documentation for specifics
-            
-            # Create undetected ChromeDriver instance with anti-detection built in
-            driver = uc.Chrome(options=options,version_main=133)
+            from webdriver_manager.chrome import ChromeDriverManager
+            driver_exec_path = ChromeDriverManager().install()
+            driver = uc.Chrome(options=options, driver_executable_path=driver_exec_path)
             
             # Set window size
             driver.set_window_size(1280, 900)
