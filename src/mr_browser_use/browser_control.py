@@ -553,7 +553,12 @@ async def start_browser(context=None):
     if session_id in _browser_sessions:
         logger.info(f"Browser session {session_id} already exists")
         return {"status": "ok", "message": "Browser is already running"}
-    
+   
+    # TODO: try this:
+    # from webdriver_manager.chrome import ChromeDriverManager
+    # driver_exec_path = ChromeDriverManager().install()
+    # driver = uc.Chrome(driver_executable_path=driver_exec_path)
+
     try:
         # Create and configure WebDriver
         loop = asyncio.get_event_loop()
