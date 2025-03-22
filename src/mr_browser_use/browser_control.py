@@ -566,6 +566,7 @@ async def start_browser(context=None):
             # Add standard arguments for stability
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--headless=new')  # New headless mode for Chrome
             
             # Useful for debugging
             # options.add_argument('--headless=new')
