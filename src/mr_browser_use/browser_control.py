@@ -441,7 +441,7 @@ async def get_browser_client(context=None):
     # If context is provided, try to get user-specific browser
     user_id = None
     if context and hasattr(context, "user") and context.user:
-        user_id = context.user.id
+        user_id = context.user
     
     session_id = f"browser_{user_id}" if user_id else "browser_default"
     
@@ -457,7 +457,7 @@ async def start_browser(context=None):
     # Get user ID for session tracking
     user_id = None
     if context and hasattr(context, "user") and context.user:
-        user_id = context.user.id
+        user_id = context.user
     
     session_id = f"browser_{user_id}" if user_id else "browser_default"
     
@@ -505,7 +505,7 @@ async def stop_browser(context=None):
     # Get user ID for session tracking
     user_id = None
     if context and hasattr(context, "user") and context.user:
-        user_id = context.user.id
+        user_id = context.user
     
     session_id = f"browser_{user_id}" if user_id else "browser_default"
     
