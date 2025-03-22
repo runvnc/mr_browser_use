@@ -573,7 +573,7 @@ async def start_browser(context=None):
             # See documentation for specifics
             
             # Create undetected ChromeDriver instance with anti-detection built in
-            driver = uc.Chrome(options=options)
+            driver = uc.Chrome(options=options,version_main=133)
             
             # Set window size
             driver.set_window_size(1280, 900)
