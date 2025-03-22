@@ -8,7 +8,8 @@ from .browser_control import (
     check_browser_dependencies, 
     start_browser, 
     stop_browser, 
-    get_browser_client
+    get_browser_client,
+    integrate_tab_handler
 )
 from lib.utils.debug import debug_box
 import traceback
@@ -560,3 +561,177 @@ async def browser_get_attribute(element_id, attribute_name, context=None):
     
     client = await get_browser_client(context)
     return await client.get_attribute(element_id, attribute_name)
+
+@command()
+async def browser_click_and_handle_new_tab(element_id, context=None):
+    """Click on an element and automatically handle any new tab that opens.
+    
+    This command will click on the specified element, detect if a new tab opens,
+    and automatically switch to that new tab if one is detected. The response will
+    include information about whether a new tab was opened.
+    
+    Parameters:
+    element_id - Integer. The ID of the element to click.
+    
+    Returns:
+    A dictionary containing:
+      - status: "ok" or "error"
+      - new_tab_opened: Boolean indicating if a new tab was opened
+      - message: Description of the result
+      - handle: The window handle of the current tab
+      - url: The URL of the current tab
+      - title: The title of the current tab
+      - original_handle: (if new_tab_opened is true) The handle of the original tab
+    
+    Example:
+    { "browser_click_and_handle_new_tab": {"element_id": 2} }
+    """
+    if element_id is None:
+        return {"status": "error", "message": "Element ID is required"}
+    
+    client = await get_browser_client(context)
+    result = await client.click_element_and_handle_new_tab(element_id)
+    
+    # Get a screenshot after clicking to show the result
+    try:
+        screenshot = await client.get_screenshot()
+        if screenshot:
+            await context.format_image_message(screenshot)
+    except Exception as e:
+        logger.error(f"Post-click screenshot error: {str(e)}")
+    
+    return result
+
+@command()
+async def browser_get_all_tabs(context=None):
+    """Get information about all open tabs in the browser.
+    
+    Returns:
+    A list of dictionaries, each containing:
+      - handle: The window handle of the tab
+      - url: The URL of the tab
+      - title: The title of the tab
+      - is_current: Boolean indicating if this is the currently active tab
+    
+    Example:
+    { "browser_get_all_tabs": {} }
+    """
+    client = await get_browser_client(context)
+    return await client.get_all_tabs()
+
+@command()
+async def browser_switch_to_tab(window_handle, context=None):
+    """Switch to a specific tab by its window handle.
+    
+    Parameters:
+    window_handle - String. The handle of the window/tab to switch to.
+    
+    Returns:
+    A dictionary containing:
+      - status: "ok" or "error"
+      - handle: The window handle of the switched-to tab
+      - url: The URL of the tab
+      - title: The title of the tab
+    
+    Example:
+    { "browser_switch_to_tab": {"window_handle": "CDwindow-123ABC..."} }
+    """
+    if not window_handle:
+        return {"status": "error", "message": "Window handle is required"}
+    
+    client = await get_browser_client(context)
+    result = await client.switch_to_tab(window_handle)
+    
+    # Get a screenshot after switching tabs
+    try:
+        screenshot = await client.get_screenshot()
+        if screenshot:
+            await context.format_image_message(screenshot)
+    except Exception as e:
+        logger.error(f"Post-tab-switch screenshot error: {str(e)}")
+    
+    return result
+
+@command()
+async def browser_switch_to_newest_tab(context=None):
+    """Switch to the most recently opened tab.
+    
+    Returns:
+    A dictionary containing:
+      - status: "ok", "error", or "info"
+      - message: Description of the result (e.g., "No new tab found")
+      - handle: The window handle of the current tab
+      - url: The URL of the current tab
+      - title: The title of the current tab
+    
+    Example:
+    { "browser_switch_to_newest_tab": {} }
+    """
+    client = await get_browser_client(context)
+    result = await client.switch_to_newest_tab()
+    
+    # Get a screenshot after switching tabs
+    try:
+        screenshot = await client.get_screenshot()
+        if screenshot:
+            await context.format_image_message(screenshot)
+    except Exception as e:
+        logger.error(f"Post-tab-switch screenshot error: {str(e)}")
+    
+    return result
+
+@command()
+async def browser_switch_to_original_tab(context=None):
+    """Switch back to the original tab (the first tab that was opened).
+    
+    Returns:
+    A dictionary containing:
+      - status: "ok" or "error"
+      - handle: The window handle of the original tab
+      - url: The URL of the original tab
+      - title: The title of the original tab
+    
+    Example:
+    { "browser_switch_to_original_tab": {} }
+    """
+    client = await get_browser_client(context)
+    result = await client.switch_to_original_tab()
+    
+    # Get a screenshot after switching tabs
+    try:
+        screenshot = await client.get_screenshot()
+        if screenshot:
+            await context.format_image_message(screenshot)
+    except Exception as e:
+        logger.error(f"Post-tab-switch screenshot error: {str(e)}")
+    
+    return result
+
+@command()
+async def browser_close_current_tab(context=None):
+    """Close the current tab and switch to another open tab.
+    
+    Returns:
+    A dictionary containing:
+      - status: "ok", "error", or "warn"
+      - message: Description of the result
+      - handle: (if a tab remains open) The window handle of the new current tab
+      - url: (if a tab remains open) The URL of the new current tab
+      - title: (if a tab remains open) The title of the new current tab
+    
+    Example:
+    { "browser_close_current_tab": {} }
+    """
+    client = await get_browser_client(context)
+    result = await client.close_current_tab()
+    
+    # Get a screenshot of the new current tab (if one remains)
+    if result.get("status") == "ok":
+        try:
+            screenshot = await client.get_screenshot()
+            if screenshot:
+                await context.format_image_message(screenshot)
+        except Exception as e:
+            logger.error(f"Post-tab-close screenshot error: {str(e)}")
+    
+    return result
