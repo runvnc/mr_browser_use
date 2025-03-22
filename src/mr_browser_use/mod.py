@@ -16,6 +16,7 @@ import traceback
 
 logger = logging.getLogger(__name__)
 
+import traceback
 debug_box("----------------------------- mr_browser_use loaded ------------------------------------")
 
 @command()
@@ -49,13 +50,17 @@ async def browser_start(url=None, context=None):
     # Get the browser client
     client = await get_browser_client(context)
     
+    print(f"DEBUG [browser_start] Got client: {client}, tab_handler: {getattr(client, 'tab_handler', None)}")
     # Ensure tab handler is initialized before attempting navigation
     if hasattr(client, 'ensure_tab_handler'):
+        print("DEBUG [browser_start] Client has ensure_tab_handler method, calling it")
         await client.ensure_tab_handler()
     elif hasattr(client, 'tab_handler') and client.tab_handler is None:
         # Fall back to manually initializing tab handler if needed
+        print("DEBUG [browser_start] Client has tab_handler attribute but it's None, manually initializing")
         from .tab_handler import integrate_tab_handler
         await integrate_tab_handler(client)
+    print(f"DEBUG [browser_start] After initialization, tab_handler: {getattr(client, 'tab_handler', None)}")
         
     # Now that browser is fully initialized, navigate to URL if provided
     if url:

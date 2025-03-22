@@ -437,12 +437,15 @@ class BrowserClient:
 
     async def ensure_tab_handler(self):
         """Ensure tab handler is initialized"""
+        print(f"DEBUG [ensure_tab_handler] Called, current tab_handler: {self.tab_handler}")
         if self.tab_handler is None:
             try:
+                print("DEBUG [ensure_tab_handler] Tab handler is None, attempting to create one")
                 self.tab_handler = await get_tab_handler(self)
                 if self.tab_handler is None:
                     logger.error("Failed to initialize tab handler")
                     return False
+                print(f"DEBUG [ensure_tab_handler] Created tab_handler: {self.tab_handler}, now integrating")
                 from .tab_handler import integrate_tab_handler
                 await integrate_tab_handler(self)
             except Exception as e:
@@ -792,12 +795,14 @@ async def start_browser(context=None):
             # Initialize tab handler
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, lambda: None)  # Small delay for browser to stabilize
+            print(f"DEBUG [start_browser] About to integrate tab handler for client: {client}")
             await integrate_tab_handler(client)
+            print(f"DEBUG [start_browser] Tab handler integration complete, tab_handler: {client.tab_handler}")
             
             logger.info(f"Started browser session {session_id}")
             return {"status": "ok", "message": "Browser started successfully"}
         except Exception as e:
-            full_error = f"Failed to start browser: {str(e)}"
+            full_error = f"Failed to start browser: {str(e)}\n{traceback.format_exc()}"
             logger.error(full_error)
             return {"status": "error", "message": full_error}
     except Exception as e:
