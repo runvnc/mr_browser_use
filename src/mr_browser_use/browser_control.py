@@ -761,15 +761,10 @@ async def start_browser(context=None):
                         driver = uc.Chrome(
                             options=fresh_options
                         )
-                    else:
-                        driver = uc.Chrome(
-                            options=fresh_options
-                        )
                         # Allow time for browser initialization
                         time.sleep(2)
                         logger.info(f"Browser PID: {driver.service.process.pid if hasattr(driver.service, 'process') else 'Unknown'}")
                         logger.info("Successfully created driver with direct approach (no version)")
-                    
                     return driver
                 except Exception as e2:
                     logger.error(f"Both driver creation methods failed: {e2}")
