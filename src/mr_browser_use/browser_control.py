@@ -571,6 +571,15 @@ async def start_browser(context=None):
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             
+            # Set headless mode - Comment the next line out for interactive mode
+            # Using argument method instead of property for better compatibility
+            # options.add_argument('--headless=new')  # For headless mode
+            
+            # Do NOT use options.headless property as it may cause issues with
+            # undetected-chromedriver in some versions
+            # options.headless = True  # This can cause problems, use argument instead
+            
+            
             # Anti-detection measures
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_argument('--disable-extensions')
@@ -585,11 +594,6 @@ async def start_browser(context=None):
             # Additional anti-detection experimental options
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option("useAutomationExtension", False)
-            
-            # Headless mode configuration, currently preferring interactive mode
-            # Comment out this line to use interactive mode
-            options.headless = False  # Change to False for interactive mode
-            
             logger.info(f"Starting Chrome in {'headless' if options.headless else 'interactive'} mode")
             
             from webdriver_manager.chrome import ChromeDriverManager
@@ -606,7 +610,21 @@ async def start_browser(context=None):
                 logger.warning(f"Failed with webdriver_manager: {e}, trying direct approach")
                 try:
                     # If that fails, try direct approach without driver_executable_path
-                    driver = uc.Chrome(options=options)
+                    # Create a fresh ChromeOptions object to avoid reuse issues
+                    fresh_options = uc.ChromeOptions()
+                    fresh_options.add_argument('--no-sandbox')
+                    fresh_options.add_argument('--disable-dev-shm-usage')
+                    fresh_options.add_argument('--disable-blink-features=AutomationControlled')
+                    fresh_options.add_argument('--disable-extensions')
+                    fresh_options.add_argument('--disable-infobars')
+                    fresh_options.add_argument('--window-size=1920,1080')
+                    fresh_options.add_argument(f'--user-data-dir={data_dir}')
+                    
+                    # Set headless mode if needed (uncomment for headless)
+                    # fresh_options.add_argument('--headless=new')
+                    
+                    # Use the fresh options object
+                    driver = uc.Chrome(options=fresh_options)
                     logger.info("Successfully created driver with direct approach")
                 except Exception as e2:
                     logger.error(f"Both driver creation methods failed: {e2}")
