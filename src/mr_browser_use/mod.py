@@ -11,6 +11,7 @@ from .browser_control import (
     get_browser_client
 )
 from lib.utils.debug import debug_box
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ async def browser_screenshot(context=None):
     Example:
     { "browser_screenshot": {} }
     """
+    debug_box("top of screenshot")
     client = await get_browser_client(context)
     try:
         screenshot = await client.get_screenshot()
@@ -89,8 +91,9 @@ async def browser_screenshot(context=None):
         else:
             return {"status": "error", "message": "Failed to get screenshot"}
     except Exception as e:
-        logger.error(f"Screenshot command error: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        trace = traceback.format_exc()
+        logger.error(f"Screenshot command error: {str(e)} \n {trace}")
+        return {"status": "error", "message": str(e) + "\n" + trace}
 
 @command()
 async def browser_navigate(url, context=None):
