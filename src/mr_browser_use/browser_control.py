@@ -684,6 +684,10 @@ async def start_browser(context=None):
             # Log the browser mode
             logger.info(f"Starting Chrome in {'headless' if is_headless else 'interactive'} mode")
             
+            # Add remote debugging port - this can help with interactive mode stability
+            # by ensuring Chrome doesn't freeze when connecting
+            options.add_argument('--remote-debugging-port=9222')
+            
             from webdriver_manager.chrome import ChromeDriverManager
             
             try:
@@ -711,7 +715,9 @@ async def start_browser(context=None):
                 return driver
             except Exception as e:
                 logger.warning(f"Failed with webdriver_manager: {e}, trying direct approach")
-                try:
+                
+                # Set window size before creating the fallback driver
+                try:                    
                     # If that fails, try direct approach without driver_executable_path
                     # Create a fresh ChromeOptions object to avoid reuse issues
                     fresh_options = uc.ChromeOptions()
@@ -732,6 +738,10 @@ async def start_browser(context=None):
                     fresh_options.add_argument('--no-default-browser-check')
                     fresh_options.add_argument('--disable-gpu')
                     
+                    # Add remote debugging port - often helps with stability in interactive mode
+                    fresh_options.add_argument('--remote-debugging-port=9222')
+                    
+                    
                     fresh_options.add_argument(f'--user-data-dir={data_dir}')
                     is_headless = False  # Track headless state for logging
                     
@@ -740,7 +750,6 @@ async def start_browser(context=None):
                     # fresh_options.add_argument('--headless=new')
                     # if uncommented: is_headless = True
                     
-                    # Log browser mode
                     # if uncommented: is_headless = True
                     
                     logger.info(f"Starting Chrome in {'headless' if is_headless else 'interactive'} mode (fallback)")
@@ -770,16 +779,6 @@ async def start_browser(context=None):
                     logger.error(f"Both driver creation methods failed: {e2}")
                     raise e2
             
-            # Set window size
-            if not options.headless:
-                try:
-                    driver.set_window_size(1920, 1080)
-                except Exception as e:
-                    logger.warning(f"Could not set window size: {e}")
-            
-            logger.info("Created undetected ChromeDriver with anti-detection features")
-            return driver
-        
         # Create the driver
         try:
             driver = await loop.run_in_executor(None, create_driver)
