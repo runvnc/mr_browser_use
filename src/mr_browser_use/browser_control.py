@@ -9,10 +9,11 @@ import time
 from PIL import Image
 from io import BytesIO
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+import undetected_chromedriver as uc
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
@@ -516,9 +517,9 @@ async def check_browser_dependencies():
     try:
         loop = asyncio.get_event_loop()
         # Run a simple function that creates a Chrome options object
-        # to verify Selenium is working
-        await loop.run_in_executor(None, Options)
-        return {"status": "ok", "message": "Browser dependencies are available"}
+        # to verify undetected-chromedriver is working
+        await loop.run_in_executor(None, uc.ChromeOptions)
+        return {"status": "ok", "message": "Browser dependencies with anti-detection features are available"}
     except Exception as e:
         logger.error(f"Dependency check failed: {str(e)}")
         return {"status": "error", "message": f"Browser dependencies not available: {str(e)}"}
@@ -558,20 +559,26 @@ async def start_browser(context=None):
         loop = asyncio.get_event_loop()
         
         def create_driver():
-            options = Options()
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
+            # Create undetected_chromedriver options
+            options = uc.ChromeOptions()
+            
+            # Add standard arguments for stability
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            
             # Useful for debugging
-            # options.add_argument("--headless=new")
+            # options.add_argument('--headless=new')
             
-            # Add mobile emulation for consistent rendering
-            # options.add_experimental_option("mobileEmulation", {
-            #     "deviceMetrics": {"width": 1280, "height": 900, "pixelRatio": 2.0}
-            # })
+            # Note: Some experimental options work differently with undetected_chromedriver
+            # See documentation for specifics
             
-            driver = webdriver.Chrome(options=options)
+            # Create undetected ChromeDriver instance with anti-detection built in
+            driver = uc.Chrome(options=options)
+            
             # Set window size
             driver.set_window_size(1280, 900)
+            
+            logger.info("Created undetected ChromeDriver with anti-detection features")
             return driver
         
         # Create the driver
