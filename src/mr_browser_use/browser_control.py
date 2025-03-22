@@ -6,6 +6,7 @@ import base64
 import logging
 import os
 import time
+from PIL import Image
 from io import BytesIO
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -41,10 +42,11 @@ class BrowserClient:
             return {"status": "error", "message": str(e)}
     
     async def get_screenshot(self):
-        """Capture screenshot as base64 string"""
+        """Capture screenshot as PIL Image"""
         try:
             screenshot = self.driver.get_screenshot_as_png()
-            return base64.b64encode(screenshot).decode("utf-8")
+            image = Image.open(BytesIO(screenshot))
+            return image
         except WebDriverException as e:
             logger.error(f"Screenshot error: {str(e)}")
             return None
@@ -386,7 +388,7 @@ class BrowserClient:
             # Execute DOM analysis JavaScript
             with open(os.path.join(os.path.dirname(__file__), "static/js/dom-analyzer.js"), "r") as f:
                 script = f.read()
-            
+
             # Add script execution wrapper
             exec_script = """
             // Initialize global element storage
@@ -394,7 +396,7 @@ class BrowserClient:
             
             // Execute analyzer
             return (() => {
-                // DOM Analyzer script is inserted here
+                // DOM Analyzer script is inserted here (see dom-analyzer.js)
                 %s
                 
                 // Run the function
