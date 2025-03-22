@@ -438,12 +438,17 @@ class BrowserClient:
     async def ensure_tab_handler(self):
         """Ensure tab handler is initialized"""
         if self.tab_handler is None:
-            self.tab_handler = await get_tab_handler(self)
-            if self.tab_handler is None:
-                logger.error("Failed to initialize tab handler")
+            try:
+                self.tab_handler = await get_tab_handler(self)
+                if self.tab_handler is None:
+                    logger.error("Failed to initialize tab handler")
+                    return False
+                from .tab_handler import integrate_tab_handler
+                await integrate_tab_handler(self)
+            except Exception as e:
+                logger.error(f"Tab handler initialization error: {str(e)}")
                 return False
         return True
-
     async def click_element_and_handle_new_tab(self, element_id):
         """Click element and handle new tab if one opens
         

@@ -46,13 +46,23 @@ async def browser_start(url=None, context=None):
         return result
     
     # If URL provided, navigate to it
+    # Get the browser client
+    client = await get_browser_client(context)
+    
+    # Ensure tab handler is initialized before attempting navigation
+    if hasattr(client, 'ensure_tab_handler'):
+        await client.ensure_tab_handler()
+    elif hasattr(client, 'tab_handler') and client.tab_handler is None:
+        # Fall back to manually initializing tab handler if needed
+        from .tab_handler import integrate_tab_handler
+        await integrate_tab_handler(client)
+        
+    # Now that browser is fully initialized, navigate to URL if provided
     if url:
-        client = await get_browser_client(context)
         await client.navigate_to(url)
     
     # Get a screenshot after starting
     try:
-        client = await get_browser_client(context)
         screenshot = await client.get_screenshot()
         if screenshot:
             # Insert the screenshot into the chat
