@@ -560,23 +560,61 @@ async def start_browser(context=None):
         loop = asyncio.get_event_loop()
         
         def create_driver():
+            # Create a custom data directory for Chrome
+            data_dir = "/tmp/mr_browser_chrome_data"
+            os.makedirs(data_dir, exist_ok=True)
+            
             # Create undetected_chromedriver options
             options = uc.ChromeOptions()
             
             # Add standard arguments for stability
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--headless=new')  # New headless mode for Chrome
             
-            # Useful for debugging
-            # options.add_argument('--headless=new')
+            # Anti-detection measures
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-infobars')
+            
+            # Set window size - important for consistent behavior
+            options.add_argument('--window-size=1920,1080')
+            
+            # Use a custom user data directory to avoid profile conflicts
+            options.add_argument(f'--user-data-dir={data_dir}')
+            
+            # Additional anti-detection experimental options
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option("useAutomationExtension", False)
+            
+            # Headless mode configuration, currently preferring interactive mode
+            # Comment out this line to use interactive mode
+            options.headless = False  # Change to False for interactive mode
+            
+            logger.info(f"Starting Chrome in {'headless' if options.headless else 'interactive'} mode")
             
             from webdriver_manager.chrome import ChromeDriverManager
-            driver_exec_path = ChromeDriverManager().install()
-            driver = uc.Chrome(options=options, driver_executable_path=driver_exec_path)
+            
+            try:
+                # Try with driver manager path
+                driver_exec_path = ChromeDriverManager().install()
+                driver = uc.Chrome(
+                    options=options, 
+                    driver_executable_path=driver_exec_path
+                )
+                logger.info("Successfully created driver with webdriver_manager path")
+            except Exception as e:
+                logger.warning(f"Failed with webdriver_manager: {e}, trying direct approach")
+                try:
+                    # If that fails, try direct approach without driver_executable_path
+                    driver = uc.Chrome(options=options)
+                    logger.info("Successfully created driver with direct approach")
+                except Exception as e2:
+                    logger.error(f"Both driver creation methods failed: {e2}")
+                    raise e2
             
             # Set window size
-            driver.set_window_size(1280, 900)
+            if not options.headless:
+                driver.set_window_size(1920, 1080)
             
             logger.info("Created undetected ChromeDriver with anti-detection features")
             return driver
