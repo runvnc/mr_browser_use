@@ -1,0 +1,12 @@
+{% block head_scripts %}
+<script type="module" src="/browser_use/static/js/browser-viewer.js"></script>
+{% endblock %}
+
+{% block pre_content %}
+<details>
+  <summary><span class="material-icons">web</span>Browser Control</summary>
+  <div class="details-content">
+    <browser-viewer theme="dark"></browser-viewer>
+  </div>
+</details>
+{% endblock %}

@@ -1,0 +1,31 @@
+{
+  "name": "Browser Use",
+  "version": "0.1.0",
+  "description": "Plugin for browser control and interaction with web pages",
+  "commands": [
+    "browser_check",
+    "browser_start", 
+    "browser_stop",
+    "browser_screenshot",
+    "browser_navigate",
+    "browser_update_state",
+    "browser_click_element",
+    "browser_type_text",
+    "browser_hover",
+    "browser_right_click",
+    "browser_double_click",
+    "browser_set_checkbox",
+    "browser_select_option",
+    "browser_drag_and_drop",
+    "browser_press_key",
+    "browser_key_combination",
+    "browser_scroll",
+    "browser_scroll_to_element",
+    "browser_go_back",
+    "browser_go_forward",
+    "browser_refresh",
+    "browser_get_text",
+    "browser_get_attribute"
+  ],
+  "services": []
+}

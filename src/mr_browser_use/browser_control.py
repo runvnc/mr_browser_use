@@ -1,0 +1,531 @@
+"""
+Browser control module using Selenium WebDriver for MindRoot browser use plugin
+"""
+import asyncio
+import base64
+import logging
+import os
+import time
+from io import BytesIO
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import WebDriverException, TimeoutException
+
+logger = logging.getLogger(__name__)
+
+# Global session storage
+_browser_sessions = {}
+
+class BrowserClient:
+    """
+    Manages browser interaction using Selenium WebDriver
+    """
+    def __init__(self, driver, session_id):
+        self.driver = driver
+        self.session_id = session_id
+        self.start_time = time.time()
+    
+    async def navigate_to(self, url):
+        """Navigate to specified URL"""
+        try:
+            self.driver.get(url)
+            return {"status": "ok", "url": url}
+        except WebDriverException as e:
+            logger.error(f"Navigation error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def get_screenshot(self):
+        """Capture screenshot as base64 string"""
+        try:
+            screenshot = self.driver.get_screenshot_as_png()
+            return base64.b64encode(screenshot).decode("utf-8")
+        except WebDriverException as e:
+            logger.error(f"Screenshot error: {str(e)}")
+            return None
+    
+    async def click_element(self, element_id):
+        """Click element by ID from element map"""
+        try:
+            # Run the getElementByBrowserUseId function to get the element
+            script = f"""
+            return window.browserUseElements[{element_id}];
+            """
+            element = self.driver.execute_script(script)
+            if element:
+                element.click()
+                return {"status": "ok", "message": f"Clicked element {element_id}"}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Click error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def type_text(self, element_id, text):
+        """Type text into an element by ID"""
+        try:
+            # Run the getElementByBrowserUseId function to get the element
+            script = f"""
+            return window.browserUseElements[{element_id}];
+            """
+            element = self.driver.execute_script(script)
+            if element:
+                element.send_keys(text)
+                return {"status": "ok", "message": f"Typed text into element {element_id}"}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Type text error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+            
+    async def hover(self, element_id):
+        """Hover over an element by ID"""
+        try:
+            script = f"""
+            return window.browserUseElements[{element_id}];
+            """
+            element = self.driver.execute_script(script)
+            if element:
+                actions = ActionChains(self.driver)
+                actions.move_to_element(element).perform()
+                return {"status": "ok", "message": f"Hovered over element {element_id}"}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Hover error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+            
+    async def right_click(self, element_id):
+        """Right-click on an element by ID"""
+        try:
+            script = f"""
+            return window.browserUseElements[{element_id}];
+            """
+            element = self.driver.execute_script(script)
+            if element:
+                actions = ActionChains(self.driver)
+                actions.context_click(element).perform()
+                return {"status": "ok", "message": f"Right-clicked on element {element_id}"}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Right-click error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+            
+    async def double_click(self, element_id):
+        """Double-click on an element by ID"""
+        try:
+            script = f"""
+            return window.browserUseElements[{element_id}];
+            """
+            element = self.driver.execute_script(script)
+            if element:
+                actions = ActionChains(self.driver)
+                actions.double_click(element).perform()
+                return {"status": "ok", "message": f"Double-clicked on element {element_id}"}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Double-click error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def set_checkbox(self, element_id, checked=True):
+        """Check or uncheck a checkbox by ID"""
+        try:
+            script = f"""
+            const element = window.browserUseElements[{element_id}];
+            if (element) {{
+                if (element.checked !== {str(checked).lower()}) {{
+                    element.click(); // Toggle the current state
+                }}
+                return true;
+            }}
+            return false;
+            """
+            result = self.driver.execute_script(script)
+            if result:
+                return {"status": "ok", "message": f"Set checkbox {element_id} to {checked}"}
+            return {"status": "error", "message": f"Element {element_id} not found or not a checkbox"}
+        except Exception as e:
+            logger.error(f"Set checkbox error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def select_option(self, element_id, option_text=None, option_value=None):
+        """Select an option from a dropdown by ID"""
+        try:
+            # First get the select element by ID
+            script = f"""
+            return window.browserUseElements[{element_id}];
+            """
+            select_element = self.driver.execute_script(script)
+            
+            if not select_element:
+                return {"status": "error", "message": f"Element {element_id} not found"}
+            
+            # Use Selenium's Select class to interact with it
+            from selenium.webdriver.support.ui import Select
+            select = Select(select_element)
+            
+            if option_text is not None:
+                select.select_by_visible_text(option_text)
+                return {"status": "ok", "message": f"Selected option with text '{option_text}'"}
+            elif option_value is not None:
+                select.select_by_value(option_value)
+                return {"status": "ok", "message": f"Selected option with value '{option_value}'"}
+            else:
+                return {"status": "error", "message": "Either option_text or option_value must be provided"}
+        except Exception as e:
+            logger.error(f"Select option error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def drag_and_drop(self, source_id, target_id):
+        """Drag and drop one element to another by IDs"""
+        try:
+            # Get both elements by their IDs
+            script = f"""
+            return [window.browserUseElements[{source_id}], window.browserUseElements[{target_id}]];
+            """
+            elements = self.driver.execute_script(script)
+            if len(elements) != 2 or None in elements:
+                return {"status": "error", "message": "Source or target element not found"}
+                
+            source_element, target_element = elements
+            
+            # Perform drag and drop
+            actions = ActionChains(self.driver)
+            actions.drag_and_drop(source_element, target_element).perform()
+            return {"status": "ok", "message": f"Dragged element {source_id} to element {target_id}"}
+        except Exception as e:
+            logger.error(f"Drag and drop error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def get_text(self, element_id):
+        """Get the text content of an element by ID"""
+        try:
+            script = f"""
+            const element = window.browserUseElements[{element_id}];
+            return element ? element.textContent.trim() : null;
+            """
+            text = self.driver.execute_script(script)
+            if text is not None:
+                return {"status": "ok", "text": text}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Get text error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def get_attribute(self, element_id, attribute_name):
+        """Get the value of an element's attribute by ID"""
+        try:
+            script = f"""
+            const element = window.browserUseElements[{element_id}];
+            return element ? element.getAttribute('{attribute_name}') : null;
+            """
+            value = self.driver.execute_script(script)
+            if value is not None:  # Note: attribute might legitimately be empty string
+                return {"status": "ok", "value": value}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Get attribute error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def press_key(self, key):
+        """Press a keyboard key"""
+        try:
+            # Map common key names to Selenium Keys
+            key_map = {
+                "enter": Keys.ENTER,
+                "tab": Keys.TAB,
+                "escape": Keys.ESCAPE,
+                "esc": Keys.ESCAPE,
+                "space": Keys.SPACE,
+                "backspace": Keys.BACK_SPACE,
+                "delete": Keys.DELETE,
+                "arrow_up": Keys.ARROW_UP,
+                "arrow_down": Keys.ARROW_DOWN,
+                "arrow_left": Keys.ARROW_LEFT,
+                "arrow_right": Keys.ARROW_RIGHT,
+                "home": Keys.HOME,
+                "end": Keys.END,
+                "page_up": Keys.PAGE_UP,
+                "page_down": Keys.PAGE_DOWN,
+            }
+            
+            # Get the key to press
+            key_to_press = key_map.get(key.lower(), key)
+            
+            # Get the active element and send the key
+            actions = ActionChains(self.driver)
+            actions.send_keys(key_to_press).perform()
+            
+            return {"status": "ok", "message": f"Pressed key: {key}"}
+        except Exception as e:
+            logger.error(f"Press key error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def key_combination(self, keys):
+        """Press a combination of keys"""
+        try:
+            # Map common key names to Selenium Keys
+            key_map = {
+                "ctrl": Keys.CONTROL,
+                "alt": Keys.ALT,
+                "shift": Keys.SHIFT,
+                "command": Keys.COMMAND,
+                "enter": Keys.ENTER,
+                "tab": Keys.TAB,
+                "escape": Keys.ESCAPE,
+                "space": Keys.SPACE,
+                "a": "a",
+                "c": "c",
+                "v": "v",
+                "x": "x",
+                "z": "z",
+            }
+            
+            # Parse the keys to press
+            if isinstance(keys, str):
+                keys = keys.split("+")
+            
+            # Convert keys to Selenium Keys
+            keys_to_press = [key_map.get(k.lower(), k) for k in keys]
+            
+            # Press the key combination
+            actions = ActionChains(self.driver)
+            for key in keys_to_press[:-1]:
+                actions.key_down(key)
+            
+            actions.key_down(keys_to_press[-1])
+            actions.key_up(keys_to_press[-1])
+            
+            for key in reversed(keys_to_press[:-1]):
+                actions.key_up(key)
+                
+            actions.perform()
+            
+            return {"status": "ok", "message": f"Pressed key combination: {'+'.join(keys)}"}
+        except Exception as e:
+            logger.error(f"Key combination error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def scroll(self, direction="down", amount=300):
+        """Scroll the page in the specified direction"""
+        try:
+            # Map direction to JavaScript scroll parameters
+            scroll_map = {
+                "down": (0, amount),
+                "up": (0, -amount),
+                "right": (amount, 0),
+                "left": (-amount, 0),
+            }
+            
+            x_scroll, y_scroll = scroll_map.get(direction.lower(), (0, amount))
+            
+            # Execute JavaScript to scroll
+            script = f"""
+            window.scrollBy({x_scroll}, {y_scroll});
+            return true;
+            """
+            self.driver.execute_script(script)
+            
+            return {"status": "ok", "message": f"Scrolled {direction} by {amount} pixels"}
+        except Exception as e:
+            logger.error(f"Scroll error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def scroll_to_element(self, element_id):
+        """Scroll to make an element visible"""
+        try:
+            script = f"""
+            const element = window.browserUseElements[{element_id}];
+            if (element) {{
+                element.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+                return true;
+            }}
+            return false;
+            """
+            result = self.driver.execute_script(script)
+            
+            if result:
+                return {"status": "ok", "message": f"Scrolled to element {element_id}"}
+            return {"status": "error", "message": f"Element {element_id} not found"}
+        except Exception as e:
+            logger.error(f"Scroll to element error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def go_back(self):
+        """Navigate back in browser history"""
+        try:
+            self.driver.back()
+            return {"status": "ok", "message": "Navigated back"}
+        except Exception as e:
+            logger.error(f"Go back error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def go_forward(self):
+        """Navigate forward in browser history"""
+        try:
+            self.driver.forward()
+            return {"status": "ok", "message": "Navigated forward"}
+        except Exception as e:
+            logger.error(f"Go forward error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def refresh(self):
+        """Refresh the current page"""
+        try:
+            self.driver.refresh()
+            return {"status": "ok", "message": "Page refreshed"}
+        except Exception as e:
+            logger.error(f"Refresh error: {str(e)}")
+            return {"status": "error", "message": str(e)}
+    
+    async def update_state(self):
+        """Update browser state and identify interactive elements"""
+        try:
+            # Execute DOM analysis JavaScript
+            with open(os.path.join(os.path.dirname(__file__), "static/js/dom-analyzer.js"), "r") as f:
+                script = f.read()
+            
+            # Add script execution wrapper
+            exec_script = """
+            // Initialize global element storage
+            window.browserUseElements = {};
+            
+            // Execute analyzer
+            return (() => {
+                // DOM Analyzer script is inserted here
+                %s
+                
+                // Run the function
+                return findInteractiveElements({
+                    highlightElements: true,
+                    viewportExpansion: 0
+                });
+            })();
+            """ % script
+            
+            elements = self.driver.execute_script(exec_script)
+            
+            # Take a screenshot to include in the state
+            screenshot = await self.get_screenshot()
+            
+            return {
+                "status": "ok",
+                "url": self.driver.current_url,
+                "title": self.driver.title,
+                "elements": elements,
+                "screenshot": screenshot
+            }
+        except Exception as e:
+            logger.error(f"State update error: {str(e)}")
+            return {
+                "status": "error",
+                "message": str(e)
+            }
+
+async def check_browser_dependencies():
+    """Check if required dependencies for browser control are available"""
+    try:
+        loop = asyncio.get_event_loop()
+        # Run a simple function that creates a Chrome options object
+        # to verify Selenium is working
+        await loop.run_in_executor(None, Options)
+        return {"status": "ok", "message": "Browser dependencies are available"}
+    except Exception as e:
+        logger.error(f"Dependency check failed: {str(e)}")
+        return {"status": "error", "message": f"Browser dependencies not available: {str(e)}"}
+
+async def get_browser_client(context=None):
+    """Get or create browser client"""
+    # If context is provided, try to get user-specific browser
+    user_id = None
+    if context and hasattr(context, "user") and context.user:
+        user_id = context.user.id
+    
+    session_id = f"browser_{user_id}" if user_id else "browser_default"
+    
+    # Return existing session if available
+    if session_id in _browser_sessions:
+        return _browser_sessions[session_id]
+    
+    # If no session exists, create a new one
+    return await start_browser(context)
+
+async def start_browser(context=None):
+    """Start a new browser session"""
+    # Get user ID for session tracking
+    user_id = None
+    if context and hasattr(context, "user") and context.user:
+        user_id = context.user.id
+    
+    session_id = f"browser_{user_id}" if user_id else "browser_default"
+    
+    # Check if a session already exists
+    if session_id in _browser_sessions:
+        logger.info(f"Browser session {session_id} already exists")
+        return {"status": "ok", "message": "Browser is already running"}
+    
+    try:
+        # Create and configure WebDriver
+        loop = asyncio.get_event_loop()
+        
+        def create_driver():
+            options = Options()
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            # Useful for debugging
+            # options.add_argument("--headless=new")
+            
+            # Add mobile emulation for consistent rendering
+            # options.add_experimental_option("mobileEmulation", {
+            #     "deviceMetrics": {"width": 1280, "height": 900, "pixelRatio": 2.0}
+            # })
+            
+            driver = webdriver.Chrome(options=options)
+            # Set window size
+            driver.set_window_size(1280, 900)
+            return driver
+        
+        # Create the driver
+        driver = await loop.run_in_executor(None, create_driver)
+        
+        # Create client and store in session
+        client = BrowserClient(driver, session_id)
+        _browser_sessions[session_id] = client
+        
+        logger.info(f"Started browser session {session_id}")
+        return {"status": "ok", "message": "Browser started successfully"}
+    except Exception as e:
+        logger.error(f"Failed to start browser: {str(e)}")
+        return {"status": "error", "message": f"Failed to start browser: {str(e)}"}
+
+async def stop_browser(context=None):
+    """Stop and clean up browser session"""
+    # Get user ID for session tracking
+    user_id = None
+    if context and hasattr(context, "user") and context.user:
+        user_id = context.user.id
+    
+    session_id = f"browser_{user_id}" if user_id else "browser_default"
+    
+    # Check if a session exists
+    if session_id not in _browser_sessions:
+        logger.info(f"No browser session {session_id} found to stop")
+        return {"status": "ok", "message": "No browser running"}
+    
+    try:
+        # Get session and quit driver
+        client = _browser_sessions[session_id]
+        
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, client.driver.quit)
+        
+        # Remove from sessions
+        del _browser_sessions[session_id]
+        
+        logger.info(f"Stopped browser session {session_id}")
+        return {"status": "ok", "message": "Browser stopped successfully"}
+    except Exception as e:
+        logger.error(f"Failed to stop browser: {str(e)}")
+        return {"status": "error", "message": f"Failed to stop browser: {str(e)}"}
