@@ -1,7 +1,7 @@
 /**
  * DOM Analyzer for Browser Use Plugin
  * 
- * Simplified version of browser-use buildDomTree.js
+ * Enhanced version with better event listener detection
  * This script identifies interactive elements on the page and optionally highlights them
  */
 
@@ -24,11 +24,19 @@ function findInteractiveElements(options = {}) {
   
   // Main interactive element selectors
   const interactiveSelectors = [
+    // Standard interactive elements
     'a', 'button', 'input', 'select', 'textarea',
     '[role="button"]', '[tabindex="0"]', '[onclick]',
     'summary', 'details', 'label', 'option',
     'iframe', 'video', 'audio', 'menu', 'menuitem',
-    '[contenteditable="true"]'
+    '[contenteditable="true"]',
+    
+    // Add SVG-specific selectors
+    'svg path', 'svg rect', 'svg polygon', 'svg g', 
+    'svg circle', 'svg ellipse',
+    
+    // Add map-specific selectors
+    'map area', '[usemap]'
   ];
   
   // Find all potentially interactive elements
@@ -36,57 +44,152 @@ function findInteractiveElements(options = {}) {
   
   // Process each element
   const result = [];
-  Array.from(elements).forEach(element => {
-    // Skip invisible elements
-    if (!isElementVisible(element)) {
-      return;
-    }
-    
-    // Get element details
-    const rect = element.getBoundingClientRect();
-    
-    // Skip elements outside the expanded viewport
-    if (!isInExpandedViewport(rect, viewportExpansion)) {
-      return;
-    }
-    
-    // Generate a unique identifier for this element
-    const id = highlightIndex++;
-    
-    // Get basic information about the element
-    const elementData = {
-      id: id,
-      tagName: element.tagName.toLowerCase(),
-      text: element.textContent.trim().substring(0, 100),
-      attributes: getKeyAttributes(element),
-      xpath: getElementXPath(element),
-      rect: {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height
-      }
-    };
-    
-    // Store element for later use (click operations, etc.)
-    window.browserUseElements[id] = element;
-    
-    // Add to result array
-    result.push(elementData);
-    
-    // Highlight the element if requested
-    if (highlightElements && (focusElement === -1 || focusElement === id)) {
-      highlightElement(element, id);
-      highlightedElements.push(element);
-    }
-  });
   
+  // Process and store interactive elements
+  function processElements(elementList) {
+    Array.from(elementList).forEach(element => {
+      // Skip invisible elements
+      if (!isElementVisible(element)) {
+        return;
+      }
+      
+      // Get element details
+      const rect = element.getBoundingClientRect();
+      
+      // Skip elements outside the expanded viewport
+      if (!isInExpandedViewport(rect, viewportExpansion)) {
+        return;
+      }
+      
+      // Generate a unique identifier for this element
+      const id = highlightIndex++;
+      
+      // Get basic information about the element
+      const elementData = {
+        id: id,
+        tagName: element.tagName.toLowerCase(),
+        text: element.textContent.trim().substring(0, 100),
+        attributes: getKeyAttributes(element),
+        xpath: getElementXPath(element),
+        rect: {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }
+      };
+      
+      // Store element for later use (click operations, etc.)
+      window.browserUseElements[id] = element;
+      
+      // Add to result array
+      result.push(elementData);
+      
+      // Highlight the element if requested
+      if (highlightElements && (focusElement === -1 || focusElement === id)) {
+        highlightElement(element, id);
+        highlightedElements.push(element);
+      }
+    });
+  }
+  
+  // Process standard interactive elements
+  processElements(elements);
+  
+  // Find and process elements with event listeners or pointer cursor
+  const elementsWithEvents = findElementsWithEventListeners();
+  processElements(elementsWithEvents);
+
   // Return the elements and page info
   return {
     elements: result,
     url: document.location.href,
     title: document.title
   };
+}
+
+/**
+ * Find elements with event listeners or cursor:pointer
+ */
+function findElementsWithEventListeners() {
+  const results = new Set();
+  
+  // Check all elements on the page
+  const allElements = document.querySelectorAll('*');
+  
+  Array.from(allElements).forEach(element => {
+    // Skip elements we already know are standard interactive elements
+    if (element.tagName === 'A' || element.tagName === 'BUTTON' || 
+        element.tagName === 'INPUT' || element.tagName === 'SELECT') {
+      return;
+    }
+    
+    // Check for event handlers directly on the element
+    const hasClickHandler =
+      element.onclick !== null ||
+      element.getAttribute("onclick") !== null ||
+      element.hasAttribute("ng-click") ||
+      element.hasAttribute("@click") ||
+      element.hasAttribute("v-on:click");
+    
+    if (hasClickHandler) {
+      results.add(element);
+      return;
+    }
+    
+    // Check computed styles for cursor: pointer (strong indicator of clickable elements)
+    const style = window.getComputedStyle(element);
+    if (style.cursor === 'pointer') {
+      results.add(element);
+      return;
+    }
+    
+    // Check for event listeners using our best approach
+    const listeners = getEventListeners(element);
+    const hasClickListeners =
+      listeners &&
+      (listeners.click?.length > 0 ||
+       listeners.mousedown?.length > 0 ||
+       listeners.mouseup?.length > 0 ||
+       listeners.touchstart?.length > 0 ||
+       listeners.touchend?.length > 0);
+    
+    if (hasClickListeners) {
+      results.add(element);
+    }
+  });
+  
+  return Array.from(results);
+}
+
+/**
+ * Helper function to safely get event listeners
+ */
+function getEventListeners(el) {
+  try {
+    // Try the official API if available (Chrome DevTools)
+    if (window.getEventListeners) {
+      return window.getEventListeners(el) || {};
+    }
+    
+    // Fallback: check for on* properties
+    const listeners = {};
+    const eventTypes = [
+      "click", "mousedown", "mouseup", "touchstart", "touchend",
+      "mouseover", "mouseout", "keydown", "keyup", "focus", "blur"
+    ];
+    
+    for (const type of eventTypes) {
+      const handler = el[`on${type}`];
+      if (handler) {
+        listeners[type] = [{ listener: handler, useCapture: false }];
+      }
+    }
+    
+    return listeners;
+  } catch (e) {
+    return {};
+  }
 }
 
 /**
@@ -136,7 +239,7 @@ function getKeyAttributes(element) {
   const attributeNames = [
     'id', 'name', 'value', 'type', 'href', 'src', 
     'alt', 'placeholder', 'aria-label', 'title', 'role',
-    'class'
+    'class', 'data-id', 'data-name', 'data-value'
   ];
   
   // Collect attributes
@@ -170,7 +273,7 @@ function getElementXPath(element) {
     const pathIndex = index ? `[${index + 1}]` : '';
     paths.unshift(`${tagName}${pathIndex}`);
   }
-  return paths.join('/');
+  return paths.length ? `/${paths.join('/')}` : '';
 }
 
 /**
