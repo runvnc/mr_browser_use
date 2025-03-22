@@ -7,6 +7,7 @@ import logging
 import re
 import os
 import time
+import tempfile
 from PIL import Image
 from io import BytesIO
 from selenium import webdriver
@@ -614,14 +615,20 @@ async def start_browser(context=None):
         # Create and configure WebDriver
         loop = asyncio.get_event_loop()
         
+        # Debug: Print display environment variable
+        logger.info(f"DISPLAY environment variable: {os.environ.get('DISPLAY', 'Not set')}")
+        
         # Detect Chrome version before creating the driver
         chrome_version = await loop.run_in_executor(None, detect_chrome_version)
         logger.info(f"Using Chrome version: {chrome_version or 'auto-detect'}") 
         
         def create_driver():
-            # Create a custom data directory for Chrome
-            data_dir = "/tmp/mr_browser_chrome_data"
+            # Create a temporary directory for Chrome data
+            # Using a fresh directory for each session can help avoid profile issues
+            data_dir = tempfile.mkdtemp(prefix="mr_browser_chrome_")
             os.makedirs(data_dir, exist_ok=True)
+            
+            logger.info(f"Using temporary Chrome profile directory: {data_dir}")
             
             # Create undetected_chromedriver options
             options = uc.ChromeOptions()
@@ -658,13 +665,21 @@ async def start_browser(context=None):
             # Use a custom user data directory to avoid profile conflicts
             options.add_argument(f'--user-data-dir={data_dir}')
             
-            
+            # Try setting display explicitly if not set
+            if not os.environ.get('DISPLAY'):
+                os.environ['DISPLAY'] = ':0'
+                
             # Check if headless mode is enabled by looking for the argument
             is_headless = False
             for arg in options.arguments:
                 if '--headless' in arg:
                     is_headless = True
                     break
+            
+            # Additional arguments that can help with stability in interactive mode
+            options.add_argument('--no-first-run')
+            options.add_argument('--no-default-browser-check')
+            options.add_argument('--disable-gpu')
             
             # Log the browser mode
             logger.info(f"Starting Chrome in {'headless' if is_headless else 'interactive'} mode")
@@ -682,12 +697,18 @@ async def start_browser(context=None):
                         driver_executable_path=driver_exec_path,
                         version_main=chrome_version  # Use detected version
                     )
+                    # Allow time for browser initialization
+                    time.sleep(2)
                 else:
                     driver = uc.Chrome(
                         options=options, 
                         driver_executable_path=driver_exec_path
                     )
+                    # Allow time for browser initialization
+                    time.sleep(2)
                 logger.info("Successfully created driver with webdriver_manager path")
+                logger.info(f"Browser PID: {driver.service.process.pid if hasattr(driver.service, 'process') else 'Unknown'}")
+                return driver
             except Exception as e:
                 logger.warning(f"Failed with webdriver_manager: {e}, trying direct approach")
                 try:
@@ -697,7 +718,7 @@ async def start_browser(context=None):
                     fresh_options.add_argument('--no-sandbox')
                     fresh_options.add_argument('--disable-dev-shm-usage')
                     fresh_options.add_argument('--disable-blink-features=AutomationControlled')
-                    fresh_options.add_argument('--disable-extensions')
+                    # Keep extensions enabled as disabling them sometimes causes issues
                     fresh_options.add_argument('--disable-infobars')
                     
                     # Set window size
@@ -705,10 +726,17 @@ async def start_browser(context=None):
                     
                     # Add user agent to help avoid detection
                     fresh_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36')
+                    
+                    # Additional arguments for stability
+                    fresh_options.add_argument('--no-first-run')
+                    fresh_options.add_argument('--no-default-browser-check')
+                    fresh_options.add_argument('--disable-gpu')
+                    
                     fresh_options.add_argument(f'--user-data-dir={data_dir}')
                     is_headless = False  # Track headless state for logging
                     
-                    # Uncomment the next line for headless mode
+                    # IMPORTANT: Uncomment the next line for headless mode
+                    # If interactive mode freezes, try enabling headless mode
                     # fresh_options.add_argument('--headless=new')
                     # if uncommented: is_headless = True
                     
@@ -725,10 +753,22 @@ async def start_browser(context=None):
                             options=fresh_options,
                             version_main=chrome_version  # Use detected version
                         )
+                        # Allow time for browser initialization
+                        time.sleep(2)
+                        logger.info(f"Browser PID: {driver.service.process.pid if hasattr(driver.service, 'process') else 'Unknown'}")
                     else:
                         driver = uc.Chrome(
                             options=fresh_options
                         )
+                    else:
+                        driver = uc.Chrome(
+                            options=fresh_options
+                        )
+                        # Allow time for browser initialization
+                        time.sleep(2)
+                        logger.info(f"Browser PID: {driver.service.process.pid if hasattr(driver.service, 'process') else 'Unknown'}")
+                    
+                    return driver
                     logger.info("Successfully created driver with direct approach")
                 except Exception as e2:
                     logger.error(f"Both driver creation methods failed: {e2}")
@@ -736,25 +776,33 @@ async def start_browser(context=None):
             
             # Set window size
             if not options.headless:
-                driver.set_window_size(1920, 1080)
+                try:
+                    driver.set_window_size(1920, 1080)
+                except Exception as e:
+                    logger.warning(f"Could not set window size: {e}")
             
             logger.info("Created undetected ChromeDriver with anti-detection features")
             return driver
         
         # Create the driver
-        driver = await loop.run_in_executor(None, create_driver)
-        
-        # Create client and store in session
-        client = BrowserClient(driver, session_id)
-        _browser_sessions[session_id] = client
-        
-        # Initialize tab handler
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: None)  # Small delay for browser to stabilize
-        await integrate_tab_handler(client)
-        
-        logger.info(f"Started browser session {session_id}")
-        return {"status": "ok", "message": "Browser started successfully"}
+        try:
+            driver = await loop.run_in_executor(None, create_driver)
+            
+            # Create client and store in session
+            client = BrowserClient(driver, session_id)
+            _browser_sessions[session_id] = client
+            
+            # Initialize tab handler
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: None)  # Small delay for browser to stabilize
+            await integrate_tab_handler(client)
+            
+            logger.info(f"Started browser session {session_id}")
+            return {"status": "ok", "message": "Browser started successfully"}
+        except Exception as e:
+            full_error = f"Failed to start browser: {str(e)}"
+            logger.error(full_error)
+            return {"status": "error", "message": full_error}
     except Exception as e:
         logger.error(f"Failed to start browser: {str(e)}")
         return {"status": "error", "message": f"Failed to start browser: {str(e)}"}
