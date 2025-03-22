@@ -757,6 +757,7 @@ async def start_browser(context=None):
                     
                     # Use the fresh options object
                     # Create driver with or without version specification
+                    chrome_version = 133
                     if chrome_version:
                         driver = uc.Chrome(
                             options=fresh_options,
