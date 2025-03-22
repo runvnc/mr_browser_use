@@ -644,15 +644,20 @@ async def start_browser(context=None):
             options.add_argument('--disable-extensions')
             options.add_argument('--disable-infobars')
             
+            # NOTE: undetected-chromedriver handles most anti-detection measures internally
+            # The following line is commented out because it causes conflicts
+            # options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            # options.add_experimental_option("useAutomationExtension", False)
+            
             # Set window size - important for consistent behavior
             options.add_argument('--window-size=1920,1080')
+            
+            # Better way to handle user agent if needed
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36')
             
             # Use a custom user data directory to avoid profile conflicts
             options.add_argument(f'--user-data-dir={data_dir}')
             
-            # Additional anti-detection experimental options
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option("useAutomationExtension", False)
             
             # Check if headless mode is enabled by looking for the argument
             is_headless = False
@@ -694,14 +699,20 @@ async def start_browser(context=None):
                     fresh_options.add_argument('--disable-blink-features=AutomationControlled')
                     fresh_options.add_argument('--disable-extensions')
                     fresh_options.add_argument('--disable-infobars')
-                    fresh_options.add_argument('--window-size=1920,1080')
-                    fresh_options.add_argument(f'--user-data-dir={data_dir}')
                     
-                    # Set headless mode if needed (uncomment for headless)
+                    # Set window size
+                    fresh_options.add_argument('--window-size=1920,1080')
+                    
+                    # Add user agent to help avoid detection
+                    fresh_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36')
+                    fresh_options.add_argument(f'--user-data-dir={data_dir}')
                     is_headless = False  # Track headless state for logging
                     
                     # Uncomment the next line for headless mode
                     # fresh_options.add_argument('--headless=new')
+                    # if uncommented: is_headless = True
+                    
+                    # Log browser mode
                     # if uncommented: is_headless = True
                     
                     logger.info(f"Starting Chrome in {'headless' if is_headless else 'interactive'} mode (fallback)")
