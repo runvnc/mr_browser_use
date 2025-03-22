@@ -4,6 +4,7 @@ Browser control module using Selenium WebDriver for MindRoot browser use plugin
 import asyncio
 import base64
 import logging
+import re
 import os
 import time
 from PIL import Image
@@ -12,6 +13,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+import subprocess
 import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.support import expected_conditions as EC
@@ -524,6 +526,59 @@ async def check_browser_dependencies():
         logger.error(f"Dependency check failed: {str(e)}")
         return {"status": "error", "message": f"Browser dependencies not available: {str(e)}"}
 
+def detect_chrome_version():
+    """Detect the installed Chrome/Chromium version.
+    
+    Returns:
+        int: The major version number of Chrome, or None if detection fails.
+    """
+    try:
+        # Try various commands to detect Chrome version
+        commands = [
+            # Linux Chrome
+            ["google-chrome", "--version"],
+            # Linux Chromium
+            ["chromium-browser", "--version"],
+            ["chromium", "--version"],
+            # macOS
+            ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "--version"],
+            # Windows (requires shell=True which we handle separately)
+        ]
+        
+        for cmd in commands:
+            try:
+                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
+                logger.info(f"Chrome version check output: {output}")
+                # Extract version number (e.g., "Google Chrome 133.0.6943.53" -> "133")
+                match = re.search(r'\b(\d+)\.(\d+\.\d+\.\d+)\b', output)
+                if match:
+                    major_version = int(match.group(1))
+                    logger.info(f"Detected Chrome major version: {major_version}")
+                    return major_version
+            except (subprocess.SubprocessError, OSError, ValueError):
+                continue
+        
+        # Windows specific approach
+        if os.name == 'nt':
+            try:
+                output = subprocess.check_output(
+                    'reg query "HKEY_CURRENT_USER\Software\Google\Chrome\BLBeacon" /v version',
+                    shell=True, text=True
+                )
+                match = re.search(r'\b(\d+)\.(\d+\.\d+\.\d+)\b', output)
+                if match:
+                    major_version = int(match.group(1))
+                    logger.info(f"Detected Chrome major version from registry: {major_version}")
+                    return major_version
+            except (subprocess.SubprocessError, OSError, ValueError):
+                pass
+    except Exception as e:
+        logger.warning(f"Error detecting Chrome version: {e}")
+    
+    # Default if detection fails
+    logger.warning("Could not detect Chrome version, will let undetected-chromedriver auto-detect")
+    return None
+
 async def get_browser_client(context=None):
     """Get or create browser client"""
     # If context is provided, try to get user-specific browser
@@ -558,6 +613,10 @@ async def start_browser(context=None):
     try:
         # Create and configure WebDriver
         loop = asyncio.get_event_loop()
+        
+        # Detect Chrome version before creating the driver
+        chrome_version = await loop.run_in_executor(None, detect_chrome_version)
+        logger.info(f"Using Chrome version: {chrome_version or 'auto-detect'}") 
         
         def create_driver():
             # Create a custom data directory for Chrome
@@ -609,11 +668,20 @@ async def start_browser(context=None):
             
             try:
                 # Try with driver manager path
-                driver_exec_path = ChromeDriverManager().install()
-                driver = uc.Chrome(
-                    options=options, 
-                    driver_executable_path=driver_exec_path
-                )
+                driver_exec_path = ChromeDriverManager().install() 
+                
+                # Create driver with or without version specification
+                if chrome_version:
+                    driver = uc.Chrome(
+                        options=options, 
+                        driver_executable_path=driver_exec_path,
+                        version_main=chrome_version  # Use detected version
+                    )
+                else:
+                    driver = uc.Chrome(
+                        options=options, 
+                        driver_executable_path=driver_exec_path
+                    )
                 logger.info("Successfully created driver with webdriver_manager path")
             except Exception as e:
                 logger.warning(f"Failed with webdriver_manager: {e}, trying direct approach")
@@ -640,7 +708,16 @@ async def start_browser(context=None):
                     # fresh_options.add_argument('--headless=new')
                     
                     # Use the fresh options object
-                    driver = uc.Chrome(options=fresh_options)
+                    # Create driver with or without version specification
+                    if chrome_version:
+                        driver = uc.Chrome(
+                            options=fresh_options,
+                            version_main=chrome_version  # Use detected version
+                        )
+                    else:
+                        driver = uc.Chrome(
+                            options=fresh_options
+                        )
                     logger.info("Successfully created driver with direct approach")
                 except Exception as e2:
                     logger.error(f"Both driver creation methods failed: {e2}")
