@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mr_browser_use",
-    version="0.2.0",
+    version="0.3.0",
     description="MindRoot plugin for browser control and interaction",
     author="MindRoot",
     packages=find_packages(where="src"),
@@ -18,6 +18,7 @@ setup(
     },
     install_requires=[
         "selenium",
+        "webdriver_manager",
         "undetected-chromedriver",
     ],
 )
