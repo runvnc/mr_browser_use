@@ -628,8 +628,7 @@ async def start_browser(context=None):
         logger.info(f"Using Chrome version: {chrome_version or 'auto-detect'}") 
         
         def create_driver():
-            chrome_version = await loop.run_in_executor(None, detect_chrome_version)
- 
+            chrome_version = os.environ.get('CHROME_VERSION', 133)
             # Create a temporary directory for Chrome data
             # Using a fresh directory for each session can help avoid profile issues
             data_dir = tempfile.mkdtemp(prefix="mr_browser_chrome_")
