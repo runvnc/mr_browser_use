@@ -434,10 +434,12 @@ class BrowserClient:
 
             return ret
         except Exception as e:
-            logger.error(f"State update error: {str(e)}")
+            trace = traceback.format_exc()
+            logger.error(f"State update error: {str(e)} {trace}")
+            print(f"State update error: {str(e)} {trace}")
             return {
                 "status": "error",
-                "message": str(e)
+                "message": str(e) + "\n" + trace
             }
 
     async def ensure_tab_handler(self):
