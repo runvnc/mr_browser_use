@@ -253,11 +253,14 @@ async def integrate_tab_handler(browser_client):
     if not hasattr(browser_client, 'tab_handler'):
         print("DEBUG [integrate_tab_handler] Client has no tab_handler attribute, creating one")
         browser_client.tab_handler = await get_tab_handler(browser_client)
+    elif browser_client.tab_handler is None:
+        print("DEBUG [integrate_tab_handler] Client has no tab_handler attribute, creating one")
+        browser_client.tab_handler = await get_tab_handler(browser_client)
     
     # Add method references to the browser client
-    if not hasattr(browser_client, 'detect_new_tabs'):
+    if browser_client.tab_handler is not None and not hasattr(browser_client, 'detect_new_tabs'):
         print("DEBUG [integrate_tab_handler] Adding tab handler methods to browser client")
-        browser_client.detect_new_tabs = browser_client.tab_handler.detect_new_tabs
+        browser_client.detect_new_tabs = browser_client.tab_handler.detect_new_tabs 
         browser_client.get_all_tabs = browser_client.tab_handler.get_all_tabs
         browser_client.switch_to_tab = browser_client.tab_handler.switch_to_tab
         browser_client.switch_to_newest_tab = browser_client.tab_handler.switch_to_newest_tab
@@ -265,6 +268,9 @@ async def integrate_tab_handler(browser_client):
         browser_client.close_current_tab = browser_client.tab_handler.close_current_tab
         browser_client.click_and_switch_if_new_tab = browser_client.tab_handler.click_and_switch_if_new_tab
     else:
-        print("DEBUG [integrate_tab_handler] Client already has tab handler methods attached")
+        if browser_client.tab_handler is None:
+            print("ERROR [integrate_tab_handler] tab_handler is None, cannot attach methods")
+        else:
+            print("DEBUG [integrate_tab_handler] Client already has tab handler methods attached")
     
     return browser_client
