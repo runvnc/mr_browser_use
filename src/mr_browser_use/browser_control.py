@@ -420,7 +420,7 @@ class BrowserClient:
             elements = self.driver.execute_script(exec_script)
             
             # Take a screenshot to include in the state
-            screenshot_img_msg = await self.get_screenshot()
+            screenshot = await self.get_screenshot()
             
             ret =  {
                 "status": "ok",
