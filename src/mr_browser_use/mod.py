@@ -151,8 +151,9 @@ async def browser_update_state(context=None):
         msgs.append(scn_msg)
         msgs.append({"type": "text", "text": json.dumps(state, indent=2)})
     except Exception as e:
-        logger.error(f"Screenshot display error: {str(e)}")
-
+        trace = traceback.format_exc()
+        logger.error(f"Screenshot display error: {str(e)} \n {trace}")
+        return {"status": "error", "message": str(e)+ "\n" + trace}
     return msgs
 
 @command()
