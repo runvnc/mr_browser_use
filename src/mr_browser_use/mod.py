@@ -87,21 +87,14 @@ async def browser_stop(context=None):
 @command()
 async def browser_screenshot(context=None):
     """Get a screenshot from the browser.
-    This will insert the screenshot into the chat.
+    This will update the browser state and return the screenshot with interactive elements.
     
     Example:
     { "browser_screenshot": {} }
     """
     debug_box("top of screenshot")
-    client = await get_browser_client(context)
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            # Insert the screenshot into the chat context
-            message = await context.format_image_message(screenshot)
-            return message
-        else:
-            return {"status": "error", "message": "Failed to get screenshot"}
+        return await browser_update_state(context)
     except Exception as e:
         trace = traceback.format_exc()
         logger.error(f"Screenshot command error: {str(e)} \n {trace}")
@@ -123,15 +116,12 @@ async def browser_navigate(url, context=None):
     client = await get_browser_client(context)
     result = await client.navigate_to(url)
     
-    # Get a screenshot after navigation
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-navigation screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_update_state(context=None):
@@ -173,15 +163,12 @@ async def browser_click_element(element_id, context=None):
     client = await get_browser_client(context)
     result = await client.click_element(element_id)
     
-    # Get a screenshot after clicking
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-click screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_type_text(element_id, text, context=None):
@@ -202,15 +189,12 @@ async def browser_type_text(element_id, text, context=None):
     client = await get_browser_client(context)
     result = await client.type_text(element_id, text)
     
-    # Get a screenshot after typing to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-type screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_hover(element_id, context=None):
@@ -228,15 +212,12 @@ async def browser_hover(element_id, context=None):
     client = await get_browser_client(context)
     result = await client.hover(element_id)
     
-    # Get a screenshot after hovering to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-hover screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_right_click(element_id, context=None):
@@ -254,15 +235,12 @@ async def browser_right_click(element_id, context=None):
     client = await get_browser_client(context)
     result = await client.right_click(element_id)
     
-    # Get a screenshot after right-clicking to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-right-click screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_double_click(element_id, context=None):
@@ -280,15 +258,12 @@ async def browser_double_click(element_id, context=None):
     client = await get_browser_client(context)
     result = await client.double_click(element_id)
     
-    # Get a screenshot after double-clicking to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-double-click screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_set_checkbox(element_id, checked=True, context=None):
@@ -307,15 +282,12 @@ async def browser_set_checkbox(element_id, checked=True, context=None):
     client = await get_browser_client(context)
     result = await client.set_checkbox(element_id, checked)
     
-    # Get a screenshot after setting checkbox to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-checkbox screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_select_option(element_id, option_text=None, option_value=None, context=None):
@@ -339,15 +311,12 @@ async def browser_select_option(element_id, option_text=None, option_value=None,
     client = await get_browser_client(context)
     result = await client.select_option(element_id, option_text, option_value)
     
-    # Get a screenshot after selecting option to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-select screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_drag_and_drop(source_id, target_id, context=None):
@@ -366,15 +335,12 @@ async def browser_drag_and_drop(source_id, target_id, context=None):
     client = await get_browser_client(context)
     result = await client.drag_and_drop(source_id, target_id)
     
-    # Get a screenshot after drag and drop to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-drag-drop screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_press_key(key, context=None):
@@ -392,15 +358,12 @@ async def browser_press_key(key, context=None):
     client = await get_browser_client(context)
     result = await client.press_key(key)
     
-    # Get a screenshot after pressing key to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-keypress screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_key_combination(keys, context=None):
@@ -419,15 +382,12 @@ async def browser_key_combination(keys, context=None):
     client = await get_browser_client(context)
     result = await client.key_combination(keys)
     
-    # Get a screenshot after pressing keys to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-key-combination screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_scroll(direction="down", amount=300, context=None):
@@ -443,15 +403,12 @@ async def browser_scroll(direction="down", amount=300, context=None):
     client = await get_browser_client(context)
     result = await client.scroll(direction, amount)
     
-    # Get a screenshot after scrolling to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-scroll screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_scroll_to_element(element_id, context=None):
@@ -469,15 +426,12 @@ async def browser_scroll_to_element(element_id, context=None):
     client = await get_browser_client(context)
     result = await client.scroll_to_element(element_id)
     
-    # Get a screenshot after scrolling to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-scroll screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_go_back(context=None):
@@ -489,15 +443,12 @@ async def browser_go_back(context=None):
     client = await get_browser_client(context)
     result = await client.go_back()
     
-    # Get a screenshot after navigating back
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-back screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_go_forward(context=None):
@@ -509,15 +460,12 @@ async def browser_go_forward(context=None):
     client = await get_browser_client(context)
     result = await client.go_forward()
     
-    # Get a screenshot after navigating forward
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-forward screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_refresh(context=None):
@@ -529,15 +477,12 @@ async def browser_refresh(context=None):
     client = await get_browser_client(context)
     result = await client.refresh()
     
-    # Get a screenshot after refreshing
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-refresh screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_get_text(element_id, context=None):
@@ -604,15 +549,12 @@ async def browser_click_and_handle_new_tab(element_id, context=None):
     client = await get_browser_client(context)
     result = await client.click_element_and_handle_new_tab(element_id)
     
-    # Get a screenshot after clicking to show the result
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-click screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_get_all_tabs(context=None):
@@ -654,15 +596,12 @@ async def browser_switch_to_tab(window_handle, context=None):
     client = await get_browser_client(context)
     result = await client.switch_to_tab(window_handle)
     
-    # Get a screenshot after switching tabs
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-tab-switch screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_switch_to_newest_tab(context=None):
@@ -682,15 +621,12 @@ async def browser_switch_to_newest_tab(context=None):
     client = await get_browser_client(context)
     result = await client.switch_to_newest_tab()
     
-    # Get a screenshot after switching tabs
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-tab-switch screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_switch_to_original_tab(context=None):
@@ -709,15 +645,12 @@ async def browser_switch_to_original_tab(context=None):
     client = await get_browser_client(context)
     result = await client.switch_to_original_tab()
     
-    # Get a screenshot after switching tabs
+    # Return browser state update instead of just a screenshot
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
-        logger.error(f"Post-tab-switch screenshot error: {str(e)}")
-    
-    return result
+        logger.error(f"Browser state update error: {str(e)}")
+        return result
 
 @command()
 async def browser_close_current_tab(context=None):
@@ -737,13 +670,11 @@ async def browser_close_current_tab(context=None):
     client = await get_browser_client(context)
     result = await client.close_current_tab()
     
-    # Get a screenshot of the new current tab (if one remains)
+    # Return browser state update instead of just a screenshot (if a tab remains open)
     if result.get("status") == "ok":
         try:
-            screenshot = await client.get_screenshot()
-            if screenshot:
-                await context.format_image_message(screenshot)
+            return await browser_update_state(context)
         except Exception as e:
-            logger.error(f"Post-tab-close screenshot error: {str(e)}")
+            logger.error(f"Browser state update error: {str(e)}")
     
     return result

@@ -68,15 +68,15 @@ function findInteractiveElements(options = {}) {
       const elementData = {
         id: id,
         tagName: element.tagName.toLowerCase(),
-        text: element.textContent.trim().substring(0, 100),
+        text: element.textContent.trim().substring(0, 200),
         attributes: getKeyAttributes(element),
-        xpath: getElementXPath(element),
-        rect: {
+        xpath: getElementXPath(element)
+        /* rect: {
           left: rect.left,
           top: rect.top,
           width: rect.width,
           height: rect.height
-        }
+        }*/ 
       };
       
       // Store element for later use (click operations, etc.)
@@ -247,7 +247,7 @@ function getKeyAttributes(element) {
     if (element.hasAttribute(name)) {
       attributes[name] = element.getAttribute(name);
       if (name === 'href' || name === 'src' || name == 'data-value') {
-        attributes[name] = attributes[name].substring(0, 100);
+        attributes[name] = attributes[name].substring(0, 200);
       }
     }
   });
