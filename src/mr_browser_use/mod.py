@@ -13,6 +13,7 @@ from .browser_control import (
 )
 from lib.utils.debug import debug_box
 import traceback
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -66,17 +67,12 @@ async def browser_start(url=None, context=None):
     if url:
         await client.navigate_to(url)
     
-    # Get a screenshot after starting
     try:
-        screenshot = await client.get_screenshot()
-        if screenshot:
-            # Insert the screenshot into the chat
-            await context.format_image_message(screenshot)
+        return await browser_update_state(context)
     except Exception as e:
         logger.error(f"Screenshot error: {str(e)}")
-        result["screenshot_error"] = str(e)
+        return str(e)
     
-    return result
 
 @command()
 async def browser_stop(context=None):
@@ -147,17 +143,17 @@ async def browser_update_state(context=None):
     """
     client = await get_browser_client(context)
     state = await client.update_state()
-    
-    # Include screenshot in chat for convenience
-    if "screenshot" in state and state["screenshot"]:
-        try:
-            await context.format_image_message(state["screenshot"])
-            # Remove the screenshot from the result to avoid duplicate data
-            state.pop("screenshot")
-        except Exception as e:
-            logger.error(f"Screenshot display error: {str(e)}")
-    
-    return state
+
+    msgs = []
+    try:
+        scn_msg = await context.format_image_message(state["screenshot"])
+        state.pop("screenshot")
+        msgs.append(scn_msg)
+        msgs.append({"type": "text", "text": json.dumps(state, indent=2)})
+    except Exception as e:
+        logger.error(f"Screenshot display error: {str(e)}")
+
+    return msgs
 
 @command()
 async def browser_click_element(element_id, context=None):
