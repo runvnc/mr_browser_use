@@ -246,6 +246,9 @@ function getKeyAttributes(element) {
   attributeNames.forEach(name => {
     if (element.hasAttribute(name)) {
       attributes[name] = element.getAttribute(name);
+      if (name === 'href' || name === 'src' || name == 'data-value') {
+        attributes[name] = attributes[name].substring(0, 100);
+      }
     }
   });
   

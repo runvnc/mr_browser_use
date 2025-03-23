@@ -421,14 +421,18 @@ class BrowserClient:
             
             # Take a screenshot to include in the state
             screenshot_img_msg = await self.get_screenshot()
-           
-            return {
+            
+            ret =  {
                 "status": "ok",
                 "url": self.driver.current_url,
                 "title": self.driver.title,
                 "elements": elements,
                 "screenshot": screenshot
             }
+
+            self.driver.execute_script("window.removeHighlights()")
+
+            return ret
         except Exception as e:
             logger.error(f"State update error: {str(e)}")
             return {
