@@ -17,7 +17,7 @@ function findInteractiveElements(options = {}) {
   
   // Element storage for access from Python
   window.browserUseElements = window.browserUseElements || {};
-  window.removeAllHighlights = removeHighlights;
+  window.removeHighlights = removeHighlights;
   // Highlighted elements tracking
   const highlightedElements = [];
   let highlightIndex = 0;
