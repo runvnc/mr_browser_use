@@ -69,8 +69,8 @@ function findInteractiveElements(options = {}) {
         id: id,
         tagName: element.tagName.toLowerCase(),
         text: element.textContent.trim().substring(0, 200),
-        attributes: getKeyAttributes(element),
-        xpath: getElementXPath(element)
+        attributes: getKeyAttributes(element)
+        //xpath: getElementXPath(element)
         /* rect: {
           left: rect.left,
           top: rect.top,
